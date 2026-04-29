@@ -1,0 +1,112 @@
+.cta-section {
+  position: relative;
+  padding: 7rem 0;
+  overflow: hidden;
+}
+
+.cta-section__bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(99,102,241,0.12) 0%,
+    rgba(168,85,247,0.08) 50%,
+    rgba(6,182,212,0.08) 100%
+  );
+  border-top: 1px solid var(--clr-border);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.cta-section__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.cta-section__orb--1 {
+  width: 500px;
+  height: 500px;
+  top: -150px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
+  animation: float 8s ease-in-out infinite;
+}
+
+.cta-section__orb--2 {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  right: -50px;
+  background: radial-gradient(circle, rgba(168,85,247,0.16) 0%, transparent 70%);
+  animation: float 10s ease-in-out 2s infinite;
+}
+
+.cta-section__inner {
+  position: relative;
+  z-index: 1;
+}
+
+.cta-section__content {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.cta-section__title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--clr-text);
+  margin-bottom: 1.25rem;
+}
+
+.cta-section__desc {
+  font-size: 1.1rem;
+  color: var(--clr-text-muted);
+  line-height: 1.75;
+  margin-bottom: 2.5rem;
+}
+
+.cta-section__actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.cta-section__btn-main {
+  box-shadow: 0 8px 40px rgba(99,102,241,0.5);
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+}
+
+.cta-section__btn-main:hover {
+  box-shadow: 0 12px 60px rgba(99,102,241,0.65);
+}
+
+/* Trust badges */
+.cta-section__trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.trust-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--clr-text-dim);
+}
+
+@media (max-width: 480px) {
+  .cta-section__actions { flex-direction: column; align-items: center; }
+  .cta-section__trust { gap: 0.75rem; }
+}
