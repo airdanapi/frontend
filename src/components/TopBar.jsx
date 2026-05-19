@@ -1,169 +1,89 @@
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, User } from 'lucide-react';
 
 export default function TopBar({ title }) {
+  const env = import.meta.env.VITE_ENV || 'DEV';
+  
+  const envColors = {
+    DEV: { bg: '#DBEAFE', text: '#1E40AF' },
+    STAGING: { bg: '#FEF3C7', text: '#92400E' },
+    PROD: { bg: '#FEE2E2', text: '#991B1B' }
+  };
+
+  const envStyle = envColors[env] || envColors.DEV;
+
   return (
-    <header className="topbar">
-      <div className="topbar-left">
-        <h2 className="topbar-title">{title}</h2>
+    <div className="top-bar">
+      <div className="top-bar-left">
+        <h2 className="top-bar-title">{title}</h2>
       </div>
-
-      <div className="topbar-right">
-        <div className="topbar-env-badge">DEV</div>
-
-        <div className="topbar-search">
-          <Search size={14} />
-          <input type="text" placeholder="Search..." className="topbar-search-input" />
+      <div className="top-bar-right">
+        <div className="env-badge" style={{ 
+          background: envStyle.bg, 
+          color: envStyle.text 
+        }}>
+          {env}
         </div>
-
-        <button className="topbar-icon-btn">
+        <button className="icon-btn">
           <Bell size={18} />
-          <span className="topbar-notif-dot" />
         </button>
-
-        <div className="topbar-user">
-          <div className="topbar-avatar">
-            <User size={16} />
-          </div>
-          <div className="topbar-user-info">
-            <span className="topbar-user-name">Operator</span>
-            <span className="topbar-user-role">Admin</span>
-          </div>
-        </div>
+        <button className="icon-btn">
+          <User size={18} />
+        </button>
       </div>
 
       <style>{`
-        .topbar {
-          position: fixed;
-          top: 0;
-          left: var(--sidebar-width);
-          right: 0;
-          height: var(--topbar-height);
-          background: rgba(30, 41, 59, 0.85);
-          backdrop-filter: blur(16px);
+        .top-bar {
+          height: 64px;
+          background: var(--color-bg-card);
           border-bottom: 1px solid var(--color-border-light);
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 0 var(--space-6);
-          z-index: 35;
+          position: sticky;
+          top: 0;
+          z-index: 30;
         }
 
-        .topbar-title {
-          font-size: var(--text-md);
-          font-weight: 600;
+        .top-bar-title {
+          font-size: var(--text-xl);
+          font-weight: 700;
           color: var(--color-text-primary);
         }
 
-        .topbar-right {
+        .top-bar-right {
           display: flex;
           align-items: center;
-          gap: var(--space-4);
+          gap: var(--space-3);
         }
 
-        .topbar-env-badge {
-          padding: 2px 10px;
+        .env-badge {
+          padding: 4px 12px;
           border-radius: var(--radius-full);
           font-size: var(--text-xs);
           font-weight: 700;
-          background: var(--color-info-light);
-          color: var(--color-info);
-          letter-spacing: 0.08em;
+          letter-spacing: 0.05em;
         }
 
-        .topbar-search {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-          padding: var(--space-1) var(--space-3);
-          background: var(--color-bg-primary);
-          border: 1px solid var(--color-border-light);
+        .icon-btn {
+          width: 36px;
+          height: 36px;
           border-radius: var(--radius-md);
-          color: var(--color-text-tertiary);
-        }
-
-        .topbar-search-input {
-          border: none;
-          background: transparent;
-          color: var(--color-text-primary);
-          font-family: var(--font-ui);
-          font-size: var(--text-sm);
-          outline: none;
-          width: 140px;
-        }
-
-        .topbar-search-input::placeholder {
-          color: var(--color-text-muted);
-        }
-
-        .topbar-icon-btn {
-          position: relative;
-          background: transparent;
-          border: none;
+          border: 1px solid var(--color-border);
+          background: var(--color-bg-secondary);
           color: var(--color-text-secondary);
-          cursor: pointer;
-          padding: var(--space-2);
-          border-radius: var(--radius-md);
-          transition: all var(--transition-fast);
-        }
-
-        .topbar-icon-btn:hover {
-          background: var(--color-bg-hover);
-          color: var(--color-text-primary);
-        }
-
-        .topbar-notif-dot {
-          position: absolute;
-          top: 6px;
-          right: 6px;
-          width: 7px;
-          height: 7px;
-          background: var(--color-danger);
-          border-radius: 50%;
-          border: 2px solid var(--color-bg-secondary);
-        }
-
-        .topbar-user {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-          cursor: pointer;
-          padding: var(--space-1) var(--space-2);
-          border-radius: var(--radius-md);
-          transition: all var(--transition-fast);
-        }
-
-        .topbar-user:hover {
-          background: var(--color-bg-hover);
-        }
-
-        .topbar-avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: var(--color-bg-tertiary);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--color-text-secondary);
+          cursor: pointer;
+          transition: all var(--transition-fast);
         }
 
-        .topbar-user-info {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .topbar-user-name {
-          font-size: var(--text-sm);
-          font-weight: 600;
+        .icon-btn:hover {
+          background: var(--color-bg-hover);
           color: var(--color-text-primary);
-          line-height: 1.2;
-        }
-
-        .topbar-user-role {
-          font-size: var(--text-xs);
-          color: var(--color-text-tertiary);
         }
       `}</style>
-    </header>
+    </div>
   );
 }

@@ -1,40 +1,8 @@
+import { useState, useEffect } from 'react';
 import TopBar from '../components/TopBar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, AlertCircle, Clock, Coins } from 'lucide-react';
-
-const throughputData = [
-  { time: '00:00', requests: 120 }, { time: '02:00', requests: 85 },
-  { time: '04:00', requests: 45 }, { time: '06:00', requests: 78 },
-  { time: '08:00', requests: 210 }, { time: '10:00', requests: 380 },
-  { time: '12:00', requests: 450 }, { time: '14:00', requests: 520 },
-  { time: '16:00', requests: 480 }, { time: '18:00', requests: 390 },
-  { time: '20:00', requests: 280 }, { time: '22:00', requests: 180 },
-];
-
-const serviceData = [
-  { name: 'PasarKita', requests: 1240 },
-  { name: 'WarungPOS', requests: 890 },
-  { name: 'SupplierHub', requests: 560 },
-  { name: 'LogistiKita', requests: 420 },
-  { name: 'SmartBank', requests: 2100 },
-  { name: 'UMKM Insight', requests: 310 },
-];
-
-const recentErrors = [
-  { time: '14:23:45', service: 'SupplierHub', endpoint: '/supplier/pay', status: 502, message: 'UPSTREAM_FAILED' },
-  { time: '14:18:12', service: 'LogistiKita', endpoint: '/logistics/pay', status: 429, message: 'RATE_LIMITED' },
-  { time: '14:10:33', service: 'PasarKita', endpoint: '/marketplace/checkout', status: 401, message: 'AUTH_INVALID_TOKEN' },
-  { time: '13:55:08', service: 'WarungPOS', endpoint: '/pos/pay', status: 503, message: 'CIRCUIT_OPEN' },
-];
-
-const circuitStates = [
-  { service: 'SmartBank', state: 'CLOSED', latency: '12ms' },
-  { service: 'PasarKita', state: 'CLOSED', latency: '28ms' },
-  { service: 'WarungPOS', state: 'CLOSED', latency: '15ms' },
-  { service: 'SupplierHub', state: 'HALF-OPEN', latency: '450ms' },
-  { service: 'LogistiKita', state: 'CLOSED', latency: '22ms' },
-  { service: 'UMKM Insight', state: 'CLOSED', latency: '8ms' },
-];
+import apiService from '../services/api';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -63,6 +31,82 @@ function getStatusBadge(status) {
 }
 
 export default function Dashboard() {
+  const [stats, setStats] = useState(null);
+  const [circuits, setCircuits] = useState([]);
+  const [recentErrors, setRecentErrors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadDashboardData();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadDashboardData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      const [logStatsRes, circuitStatesRes, logsRes, feeStatsRes] = await Promise.all([
+        apiService.getLogStats(),
+        apiService.getCircuitStates(),
+        apiService.getLogs({ limit: 10, status: 'FAILED' }),
+        apiService.getFeeStats()
+      ]);
+      
+      setStats({
+        logs: logStatsRes.data || {},
+        fees: feeStatsRes.data || {}
+      });
+      setCircuits(circuitStatesRes.data || []);
+      setRecentErrors(logsRes.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <TopBar title="Dashboard" />
+        <div className="page-container">
+          <div style={{ textAlign: 'center', padding: '60px' }}>Loading...</div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <TopBar title="Dashboard" />
+        <div className="page-container">
+          <div className="alert alert-danger">
+            <AlertCircle size={16} style={{ marginRight: 8 }} />
+            Error loading dashboard: {error}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Transform API data for charts
+  const throughputData = stats?.logs?.hourly_requests || [];
+  const serviceData = stats?.logs?.top_services || [];
+  
+  // Calculate KPIs
+  const totalRequests = stats?.logs?.total_requests || 0;
+  const errorRate = stats?.logs?.error_rate || 0;
+  const p95Latency = stats?.logs?.p95_latency_ms || 0;
+  const feeRevenue = stats?.fees?.total_revenue || 0;
+  const requestsChange = stats?.logs?.requests_change_pct || 0;
+  const errorRateChange = stats?.logs?.error_rate_change_pct || 0;
+  const latencyChange = stats?.logs?.latency_change_ms || 0;
+  const revenueChange = stats?.fees?.revenue_change_pct || 0;
+
   return (
     <>
       <TopBar title="Dashboard" />
@@ -76,23 +120,35 @@ export default function Dashboard() {
         <div className="kpi-grid">
           <div className="kpi-tile">
             <div className="kpi-label"><Activity size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Total Requests</div>
-            <div className="kpi-value">12,847</div>
-            <div className="kpi-change positive"><TrendingUp size={12} /> +14.2% vs kemarin</div>
+            <div className="kpi-value">{totalRequests.toLocaleString()}</div>
+            <div className={`kpi-change ${requestsChange >= 0 ? 'positive' : 'negative'}`}>
+              {requestsChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />} 
+              {requestsChange >= 0 ? '+' : ''}{requestsChange.toFixed(1)}% vs kemarin
+            </div>
           </div>
           <div className="kpi-tile">
             <div className="kpi-label"><AlertCircle size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Error Rate</div>
-            <div className="kpi-value">0.38%</div>
-            <div className="kpi-change positive"><TrendingDown size={12} /> -0.12%</div>
+            <div className="kpi-value">{errorRate.toFixed(2)}%</div>
+            <div className={`kpi-change ${errorRateChange <= 0 ? 'positive' : 'negative'}`}>
+              {errorRateChange <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />} 
+              {errorRateChange >= 0 ? '+' : ''}{errorRateChange.toFixed(2)}%
+            </div>
           </div>
           <div className="kpi-tile">
             <div className="kpi-label"><Clock size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />p95 Latency</div>
-            <div className="kpi-value">42ms</div>
-            <div className="kpi-change positive"><TrendingDown size={12} /> -8ms</div>
+            <div className="kpi-value">{p95Latency}ms</div>
+            <div className={`kpi-change ${latencyChange <= 0 ? 'positive' : 'negative'}`}>
+              {latencyChange <= 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />} 
+              {latencyChange >= 0 ? '+' : ''}{latencyChange}ms
+            </div>
           </div>
           <div className="kpi-tile">
             <div className="kpi-label"><Coins size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />Fee Revenue</div>
-            <div className="kpi-value monetary">Rp 284.500</div>
-            <div className="kpi-change positive"><TrendingUp size={12} /> +22.1%</div>
+            <div className="kpi-value monetary">Rp {feeRevenue.toLocaleString()}</div>
+            <div className={`kpi-change ${revenueChange >= 0 ? 'positive' : 'negative'}`}>
+              {revenueChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />} 
+              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}%
+            </div>
           </div>
         </div>
 
@@ -154,13 +210,16 @@ export default function Dashboard() {
                   <tr><th>Service</th><th>State</th><th>Latency</th></tr>
                 </thead>
                 <tbody>
-                  {circuitStates.map(c => (
-                    <tr key={c.service}>
-                      <td style={{ fontWeight: 500 }}>{c.service}</td>
+                  {circuits.map(c => (
+                    <tr key={c.service_name || c.service}>
+                      <td style={{ fontWeight: 500 }}>{c.service_name || c.service}</td>
                       <td>{getCircuitBadge(c.state)}</td>
-                      <td className="mono">{c.latency}</td>
+                      <td className="mono">{c.avg_latency_ms ? `${c.avg_latency_ms}ms` : 'N/A'}</td>
                     </tr>
                   ))}
+                  {circuits.length === 0 && (
+                    <tr><td colSpan="3" style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>No data available</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -179,13 +238,16 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {recentErrors.map((e, i) => (
-                    <tr key={i}>
-                      <td className="mono">{e.time}</td>
-                      <td style={{ fontWeight: 500 }}>{e.service}</td>
-                      <td>{getStatusBadge(e.status)}</td>
-                      <td className="mono" style={{ color: 'var(--color-danger)' }}>{e.message}</td>
+                    <tr key={e.request_id || i}>
+                      <td className="mono">{new Date(e.created_at).toLocaleTimeString()}</td>
+                      <td style={{ fontWeight: 500 }}>{e.target_app || e.service}</td>
+                      <td>{getStatusBadge(e.status_code || e.status)}</td>
+                      <td className="mono" style={{ color: 'var(--color-danger)' }}>{e.error_code || e.message}</td>
                     </tr>
                   ))}
+                  {recentErrors.length === 0 && (
+                    <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>No recent errors</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

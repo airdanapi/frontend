@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Radio, Eye, EyeOff } from 'lucide-react';
+import apiService from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,13 +9,23 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 800);
+    setError('');
+    
+    try {
+      const response = await apiService.login(email, password);
+      if (response.success) {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,6 +42,19 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div style={{
+              padding: 'var(--space-3)',
+              background: 'var(--color-danger-light)',
+              color: 'var(--color-danger)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--text-sm)',
+              marginBottom: 'var(--space-4)'
+            }}>
+              {error}
+            </div>
+          )}
+          
           <div className="form-group">
             <label className="form-label">Email</label>
             <input

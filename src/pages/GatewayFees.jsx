@@ -1,36 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TopBar from '../components/TopBar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, RefreshCw } from 'lucide-react';
-
-const revenueData = [
-  { date: 'Sen', revenue: 42000 }, { date: 'Sel', revenue: 38500 },
-  { date: 'Rab', revenue: 51200 }, { date: 'Kam', revenue: 47800 },
-  { date: 'Jum', revenue: 55300 }, { date: 'Sab', revenue: 32100 },
-  { date: 'Min', revenue: 17600 },
-];
-
-const sourceData = [
-  { name: 'PasarKita', value: 45, color: '#EA580C' },
-  { name: 'WarungPOS', value: 25, color: '#F97316' },
-  { name: 'SupplierHub', value: 18, color: '#FB923C' },
-  { name: 'LogistiKita', value: 12, color: '#FDBA74' },
-];
-
-const pendingFees = [
-  { id: 'fee_001', request_id: '550e8400-e29b-001', user_id: 'user_102', amount: 500, status: 'PENDING', retries: 2, created_at: '2026-04-29 14:23:45' },
-  { id: 'fee_002', request_id: '550e8400-e29b-002', user_id: 'user_115', amount: 250, status: 'PENDING', retries: 4, created_at: '2026-04-29 13:18:12' },
-  { id: 'fee_003', request_id: '550e8400-e29b-003', user_id: 'user_108', amount: 1000, status: 'FAILED', retries: 5, created_at: '2026-04-29 12:10:33' },
-  { id: 'fee_004', request_id: '550e8400-e29b-004', user_id: 'user_121', amount: 750, status: 'DEFERRED', retries: 1, created_at: '2026-04-29 11:55:08' },
-];
-
-const topUsers = [
-  { user_id: 'user_102', total_fees: 12500, tx_count: 48 },
-  { user_id: 'user_115', total_fees: 9800, tx_count: 36 },
-  { user_id: 'user_108', total_fees: 8200, tx_count: 31 },
-  { user_id: 'user_121', total_fees: 6500, tx_count: 24 },
-  { user_id: 'user_130', total_fees: 5100, tx_count: 19 },
-];
+import { Download, RefreshCw, AlertCircle } from 'lucide-react';
+import apiService from '../services/api';
 
 function statusBadge(s) {
   const map = { PAID: 'badge-success', PENDING: 'badge-warning', FAILED: 'badge-danger', DEFERRED: 'badge-info' };
@@ -39,6 +11,80 @@ function statusBadge(s) {
 
 export default function GatewayFees() {
   const [period, setPeriod] = useState('week');
+  const [stats, setStats] = useState(null);
+  const [fees, setFees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadFeesData();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(loadFeesData, 30000);
+    return () => clearInterval(interval);
+  }, [period]);
+
+  const loadFeesData = async () => {
+    try {
+      const [statsRes, feesRes] = await Promise.all([
+        apiService.getFeeStats({ period }),
+        apiService.getFees({ status: 'PENDING,FAILED,DEFERRED', limit: 20 })
+      ]);
+      setStats(statsRes.data || {});
+      setFees(feesRes.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load fees data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetryFee = async (feeId) => {
+    try {
+      await apiService.post(`/integrator/biaya_layanan_integrasi/${feeId}/retry`);
+      loadFeesData(); // Reload data after retry
+    } catch (err) {
+      console.error('Failed to retry fee:', err);
+      alert('Failed to retry fee: ' + err.message);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await apiService.get('/integrator/biaya_layanan_integrasi/export');
+      // Create download link
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gateway-fees-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export CSV:', err);
+      alert('Failed to export CSV: ' + err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <TopBar title="Gateway Fees" />
+        <div className="page-container">
+          <div style={{ textAlign: 'center', padding: '60px' }}>Loading...</div>
+        </div>
+      </>
+    );
+  }
+
+  const revenueData = stats?.revenue_trend || [];
+  const sourceData = stats?.revenue_by_source || [];
+  const topUsers = stats?.top_users || [];
+  const totalRevenue = stats?.total_revenue || 0;
+  const collectionRate = stats?.collection_rate || 0;
+  const pendingCount = stats?.pending_count || 0;
+  const revenueChange = stats?.revenue_change_pct || 0;
 
   return (
     <>
@@ -50,26 +96,41 @@ export default function GatewayFees() {
               <h1>Gateway Fees</h1>
               <p>Pendapatan dari biaya layanan integrasi 0.5%</p>
             </div>
-            <button className="btn btn-secondary"><Download size={14} /> Export CSV</button>
+            <button className="btn btn-secondary" onClick={handleExportCSV}><Download size={14} /> Export CSV</button>
           </div>
         </div>
+
+        {error && (
+          <div className="alert alert-danger" style={{ marginBottom: 'var(--space-4)' }}>
+            <AlertCircle size={16} style={{ marginRight: 8 }} />
+            Error loading fees data: {error}
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid-3" style={{ marginBottom: 'var(--space-5)' }}>
           <div className="kpi-tile">
-            <div className="kpi-label">Total Revenue (Minggu Ini)</div>
-            <div className="kpi-value monetary">Rp 284.500</div>
-            <div className="kpi-change positive">+22.1% vs minggu lalu</div>
+            <div className="kpi-label">Total Revenue ({period === 'day' ? 'Hari Ini' : period === 'week' ? 'Minggu Ini' : 'Bulan Ini'})</div>
+            <div className="kpi-value monetary">Rp {totalRevenue.toLocaleString()}</div>
+            <div className={`kpi-change ${revenueChange >= 0 ? 'positive' : 'negative'}`}>
+              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% vs periode lalu
+            </div>
           </div>
           <div className="kpi-tile">
             <div className="kpi-label">Fee Collection Rate</div>
-            <div className="kpi-value">99.2%</div>
-            <div className="kpi-change positive">Target: &gt;99%</div>
+            <div className="kpi-value">{collectionRate.toFixed(1)}%</div>
+            <div className={`kpi-change ${collectionRate >= 99 ? 'positive' : 'negative'}`}>
+              Target: &gt;99%
+            </div>
           </div>
           <div className="kpi-tile">
             <div className="kpi-label">Pending / Failed Fees</div>
-            <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>4</div>
-            <div className="kpi-change negative">Perlu rekonsiliasi</div>
+            <div className="kpi-value" style={{ color: pendingCount > 0 ? 'var(--color-warning)' : 'var(--color-success)' }}>
+              {pendingCount}
+            </div>
+            <div className={`kpi-change ${pendingCount > 0 ? 'negative' : 'positive'}`}>
+              {pendingCount > 0 ? 'Perlu rekonsiliasi' : 'Semua terbayar'}
+            </div>
           </div>
         </div>
 
@@ -157,20 +218,27 @@ export default function GatewayFees() {
                 <tr><th>Fee ID</th><th>Request ID</th><th>User</th><th>Amount</th><th>Status</th><th>Retries</th><th>Created</th><th>Action</th></tr>
               </thead>
               <tbody>
-                {pendingFees.map(f => (
+                {fees.map(f => (
                   <tr key={f.id}>
                     <td className="mono">{f.id}</td>
                     <td className="mono" style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.request_id}</td>
                     <td className="mono">{f.user_id}</td>
                     <td style={{ color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {f.amount.toLocaleString()}</td>
                     <td>{statusBadge(f.status)}</td>
-                    <td className="mono">{f.retries}/5</td>
-                    <td className="mono">{f.created_at}</td>
+                    <td className="mono">{f.retry_count || 0}/5</td>
+                    <td className="mono">{new Date(f.created_at).toLocaleString()}</td>
                     <td>
-                      <button className="btn btn-sm btn-secondary"><RefreshCw size={12} /> Retry</button>
+                      <button className="btn btn-sm btn-secondary" onClick={() => handleRetryFee(f.id)}>
+                        <RefreshCw size={12} /> Retry
+                      </button>
                     </td>
                   </tr>
                 ))}
+                {fees.length === 0 && (
+                  <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+                    Tidak ada fee yang pending atau failed
+                  </td></tr>
+                )}
               </tbody>
             </table>
           </div>

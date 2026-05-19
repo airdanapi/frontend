@@ -1,19 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TopBar from '../components/TopBar';
-import { Search, Filter, X, Clock, ArrowRight } from 'lucide-react';
-
-const mockLogs = Array.from({ length: 30 }, (_, i) => ({
-  id: `req_${(900 - i).toString().padStart(4, '0')}`,
-  request_id: `550e8400-e29b-41d4-a716-${(446655440000 + i * 111).toString()}`,
-  user_id: `user_${(100 + (i % 15)).toString()}`,
-  source_app: ['PasarKita', 'WarungPOS', 'SupplierHub', 'LogistiKita', 'UMKM Insight'][i % 5],
-  endpoint: ['/marketplace/checkout', '/pos/pay', '/supplier/pay', '/logistics/pay', '/analytics/dashboard'][i % 5],
-  method: i % 5 === 4 ? 'GET' : 'POST',
-  status_code: [200, 200, 200, 401, 429, 502, 200, 200, 503, 200][i % 10],
-  latency_ms: Math.floor(Math.random() * 200) + 8,
-  lifecycle: [200, 200, 200, 200, 200][i % 5] === 200 ? 'COMPLETED' : 'FAILED',
-  created_at: new Date(Date.now() - i * 120000).toISOString(),
-}));
+import { Search, Filter, X, Clock, ArrowRight, RefreshCw } from 'lucide-react';
+import apiService from '../services/api';
 
 function statusBadge(code) {
   if (code >= 500) return <span className="badge badge-danger">{code}</span>;
@@ -27,13 +15,53 @@ function lifecycleBadge(lc) {
 }
 
 export default function RequestLogs() {
+  const [logs, setLogs] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [filters, setFilters] = useState({ search: '', status: '', service: '' });
+  const [filters, setFilters] = useState({ search: '', status: '', service: '', lifecycle: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filtered = mockLogs.filter(log => {
-    if (filters.search && !log.request_id.includes(filters.search) && !log.user_id.includes(filters.search)) return false;
-    if (filters.status && log.status_code.toString() !== filters.status) return false;
-    if (filters.service && log.source_app !== filters.service) return false;
+  useEffect(() => {
+    loadLogs();
+  }, []);
+
+  const loadLogs = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        limit: 100,
+        ...(filters.status && { status_code: filters.status }),
+        ...(filters.service && { source_app: filters.service }),
+        ...(filters.lifecycle && { lifecycle: filters.lifecycle }),
+      };
+      const response = await apiService.getLogs(params);
+      setLogs(response.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load logs:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters({ ...filters, [key]: value });
+  };
+
+  const handleApplyFilters = () => {
+    loadLogs();
+  };
+
+  const filtered = logs.filter(log => {
+    if (filters.search) {
+      const search = filters.search.toLowerCase();
+      return (
+        log.request_id?.toLowerCase().includes(search) ||
+        log.user_id?.toLowerCase().includes(search) ||
+        log.source_app?.toLowerCase().includes(search)
+      );
+    }
     return true;
   });
 
@@ -50,22 +78,41 @@ export default function RequestLogs() {
           <div style={{ position: 'relative', flex: 1, maxWidth: 280 }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
             <input className="input" placeholder="Search request_id, user_id..." style={{ paddingLeft: 36, maxWidth: '100%' }}
-              value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} />
+              value={filters.search} onChange={e => handleFilterChange('search', e.target.value)} />
           </div>
-          <select className="input" style={{ maxWidth: 150 }} value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
+          <select className="input" style={{ maxWidth: 150 }} value={filters.status} onChange={e => handleFilterChange('status', e.target.value)}>
             <option value="">All Status</option>
-            <option value="200">200</option><option value="401">401</option>
-            <option value="429">429</option><option value="502">502</option><option value="503">503</option>
+            <option value="200">200</option><option value="201">201</option>
+            <option value="400">400</option><option value="401">401</option>
+            <option value="403">403</option><option value="429">429</option>
+            <option value="500">500</option><option value="502">502</option><option value="503">503</option>
           </select>
-          <select className="input" style={{ maxWidth: 150 }} value={filters.service} onChange={e => setFilters({ ...filters, service: e.target.value })}>
+          <select className="input" style={{ maxWidth: 150 }} value={filters.service} onChange={e => handleFilterChange('service', e.target.value)}>
             <option value="">All Services</option>
             <option>PasarKita</option><option>WarungPOS</option>
             <option>SupplierHub</option><option>LogistiKita</option><option>UMKM Insight</option>
+            <option>SmartBank</option>
           </select>
+          <select className="input" style={{ maxWidth: 150 }} value={filters.lifecycle} onChange={e => handleFilterChange('lifecycle', e.target.value)}>
+            <option value="">All Lifecycle</option>
+            <option value="STARTED">STARTED</option>
+            <option value="COMPLETED">COMPLETED</option>
+            <option value="FAILED">FAILED</option>
+          </select>
+          <button className="btn btn-primary" onClick={handleApplyFilters} disabled={loading}>
+            <RefreshCw size={14} style={{ marginRight: 4 }} />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
           <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-tertiary)' }}>
             <Filter size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{filtered.length} results
           </span>
         </div>
+
+        {error && (
+          <div className="alert alert-danger" style={{ marginBottom: 'var(--space-4)' }}>
+            Error loading logs: {error}
+          </div>
+        )}
 
         <div className="data-table-wrapper">
           <table className="data-table">
@@ -76,8 +123,14 @@ export default function RequestLogs() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(log => (
-                <tr key={log.id} onClick={() => setSelected(log)} style={{ cursor: 'pointer' }}>
+              {loading && (
+                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>Loading...</td></tr>
+              )}
+              {!loading && filtered.length === 0 && (
+                <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>No logs found</td></tr>
+              )}
+              {!loading && filtered.map(log => (
+                <tr key={log.id || log.request_id} onClick={() => setSelected(log)} style={{ cursor: 'pointer' }}>
                   <td className="mono">{new Date(log.created_at).toLocaleTimeString()}</td>
                   <td className="mono" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.request_id}</td>
                   <td className="mono">{log.user_id}</td>
