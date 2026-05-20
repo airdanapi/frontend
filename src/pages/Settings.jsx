@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import TopBar from '../components/TopBar';
-import { User, Shield, Monitor, Bell, Palette, ScrollText, Key, Save } from 'lucide-react';
+import { User, Shield, Monitor, Bell, Palette, ScrollText, Key, Save, Plus } from 'lucide-react';
 
 const panels = [
   { id: 'profil', label: 'Profil', icon: User },

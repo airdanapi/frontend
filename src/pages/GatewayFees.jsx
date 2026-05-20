@@ -198,7 +198,7 @@ export default function GatewayFees() {
                 <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--color-border-light)' }}>
                   <span style={{ width: 20, fontSize: 'var(--text-xs)', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>#{i + 1}</span>
                   <span className="mono" style={{ flex: 1, fontSize: 'var(--text-sm)' }}>{u.user_id}</span>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {u.total_fees.toLocaleString()}</span>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {(u.total_fees || 0).toLocaleString()}</span>
                   <span className="badge badge-info">{u.tx_count} tx</span>
                 </div>
               ))}
@@ -210,7 +210,7 @@ export default function GatewayFees() {
         <div className="card">
           <div className="card-header">
             <span className="card-title">Pending & Failed Fees</span>
-            <span className="badge badge-warning">{pendingFees.length} items</span>
+            <span className="badge badge-warning">{fees.length} items</span>
           </div>
           <div className="data-table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
@@ -223,7 +223,7 @@ export default function GatewayFees() {
                     <td className="mono">{f.id}</td>
                     <td className="mono" style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.request_id}</td>
                     <td className="mono">{f.user_id}</td>
-                    <td style={{ color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {f.amount.toLocaleString()}</td>
+                    <td style={{ color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {(f.fee_amount || 0).toLocaleString()}</td>
                     <td>{statusBadge(f.status)}</td>
                     <td className="mono">{f.retry_count || 0}/5</td>
                     <td className="mono">{new Date(f.created_at).toLocaleString()}</td>
