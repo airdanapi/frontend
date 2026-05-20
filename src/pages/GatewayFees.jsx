@@ -25,16 +25,21 @@ export default function GatewayFees() {
 
   const loadFeesData = async () => {
     try {
+      setLoading(true);
       const [statsRes, feesRes] = await Promise.all([
         apiService.getFeeStats({ period }),
         apiService.getFees({ status: 'PENDING,FAILED,DEFERRED', limit: 20 })
       ]);
-      setStats(statsRes.data || {});
-      setFees(feesRes.data || []);
+
+      console.log('Stats response:', statsRes);
+      console.log('Fees response:', feesRes);
+
+      setStats(statsRes?.data || {});
+      setFees(feesRes?.data || []);
       setError(null);
     } catch (err) {
       console.error('Failed to load fees data:', err);
-      setError(err.message);
+      setError(err?.message || 'Gagal memuat data fee');
     } finally {
       setLoading(false);
     }
@@ -79,12 +84,19 @@ export default function GatewayFees() {
   }
 
   const revenueData = stats?.revenue_trend || [];
-  const sourceData = stats?.revenue_by_source || [];
+  const sourceDataRaw = stats?.revenue_by_source || [];
   const topUsers = stats?.top_users || [];
   const totalRevenue = stats?.total_revenue || 0;
   const collectionRate = stats?.collection_rate || 0;
   const pendingCount = stats?.pending_count || 0;
   const revenueChange = stats?.revenue_change_pct || 0;
+
+  // Add colors to source data
+  const colors = ['#7E22CE', '#EA580C', '#3B82F6', '#10B981'];
+  const sourceData = sourceDataRaw.map((item, idx) => ({
+    ...item,
+    color: colors[idx % colors.length]
+  }));
 
   return (
     <>
@@ -158,7 +170,7 @@ export default function GatewayFees() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(71,85,105,0.2)" />
                   <XAxis dataKey="date" tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v/1000}k`} />
+                  <YAxis tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v / 1000}k`} />
                   <Tooltip formatter={(v) => [`Rp ${v.toLocaleString()}`, 'Revenue']} contentStyle={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 13 }} />
                   <Area type="monotone" dataKey="revenue" stroke="#7E22CE" strokeWidth={2} fill="url(#colorRev)" />
                 </AreaChart>
@@ -194,14 +206,16 @@ export default function GatewayFees() {
 
             <div style={{ marginTop: 'var(--space-5)' }}>
               <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>Top Users by Fee</h4>
-              {topUsers.map((u, i) => (
+              {topUsers && topUsers.length > 0 ? topUsers.map((u, i) => (
                 <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--color-border-light)' }}>
                   <span style={{ width: 20, fontSize: 'var(--text-xs)', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>#{i + 1}</span>
                   <span className="mono" style={{ flex: 1, fontSize: 'var(--text-sm)' }}>{u.user_id}</span>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {(u.total_fees || 0).toLocaleString()}</span>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {u.total_fees.toLocaleString()}</span>
                   <span className="badge badge-info">{u.tx_count} tx</span>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>Tidak ada data</div>
+              )}
             </div>
           </div>
         </div>
@@ -215,7 +229,7 @@ export default function GatewayFees() {
           <div className="data-table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
               <thead>
-                <tr><th>Fee ID</th><th>Request ID</th><th>User</th><th>Amount</th><th>Status</th><th>Retries</th><th>Created</th><th>Action</th></tr>
+                <tr><th>Fee ID</th><th>Request ID</th><th>User</th><th>Fee Amount</th><th>Status</th><th>Retries</th><th>Created</th><th>Action</th></tr>
               </thead>
               <tbody>
                 {fees.map(f => (
@@ -223,7 +237,7 @@ export default function GatewayFees() {
                     <td className="mono">{f.id}</td>
                     <td className="mono" style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.request_id}</td>
                     <td className="mono">{f.user_id}</td>
-                    <td style={{ color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {(f.fee_amount || 0).toLocaleString()}</td>
+                    <td style={{ color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {f.amount.toLocaleString()}</td>
                     <td>{statusBadge(f.status)}</td>
                     <td className="mono">{f.retry_count || 0}/5</td>
                     <td className="mono">{new Date(f.created_at).toLocaleString()}</td>

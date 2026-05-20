@@ -102,8 +102,8 @@ class ApiService {
     return this.get('/integrator/biaya_layanan_integrasi', filters);
   }
 
-  async getFeeStats() {
-    return this.get('/integrator/biaya_layanan_integrasi/stats');
+  async getFeeStats(filters = {}) {
+    return this.get('/integrator/biaya_layanan_integrasi/stats', filters);
   }
 
   // ========== Route Registry Endpoints ==========
