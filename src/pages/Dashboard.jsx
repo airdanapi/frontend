@@ -160,7 +160,7 @@ export default function Dashboard() {
               <span className="card-subtitle">requests / jam</span>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1}>
                 <AreaChart data={throughputData}>
                   <defs>
                     <linearGradient id="colorReq" x1="0" y1="0" x2="0" y2="1">
@@ -185,7 +185,7 @@ export default function Dashboard() {
               <span className="card-subtitle">by request volume</span>
             </div>
             <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1}>
                 <BarChart data={serviceData} layout="vertical" margin={{ left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(71,85,105,0.2)" horizontal={false} />
                   <XAxis type="number" tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
