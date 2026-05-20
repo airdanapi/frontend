@@ -210,8 +210,8 @@ export default function GatewayFees() {
                 <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2) 0', borderBottom: '1px solid var(--color-border-light)' }}>
                   <span style={{ width: 20, fontSize: 'var(--text-xs)', color: 'var(--color-text-tertiary)', textAlign: 'center' }}>#{i + 1}</span>
                   <span className="mono" style={{ flex: 1, fontSize: 'var(--text-sm)' }}>{u.user_id}</span>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {u.total_fees.toLocaleString()}</span>
-                  <span className="badge badge-info">{u.tx_count} tx</span>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-monetary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>Rp {(u.total_fees || 0).toLocaleString()}</span>
+                  <span className="badge badge-info">{u.tx_count || u.count || 0} tx</span>
                 </div>
               )) : (
                 <div style={{ padding: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>Tidak ada data</div>
