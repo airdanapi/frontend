@@ -50,8 +50,8 @@ export default function RouteRegistry() {
         downstream_url: editRoute.downstream_url,
         timeout_ms: parseInt(editRoute.timeout_ms),
         max_retries: parseInt(editRoute.max_retries),
-        is_transactional: editRoute.is_transactional,
-        is_active: editRoute.is_active,
+        is_transactional: editRoute.transactional,
+        is_active: editRoute.active,
         required_scope: editRoute.required_scope
       });
       setEditRoute(null);
@@ -64,13 +64,13 @@ export default function RouteRegistry() {
 
   const handleToggleActive = (route) => {
     setConfirmAction({
-      title: route.is_active ? 'Disable Route?' : 'Enable Route?',
-      message: route.is_active 
+      title: route.active ? 'Disable Route?' : 'Enable Route?',
+      message: route.active 
         ? `Route ${route.service_name}/${route.feature_name} akan dinonaktifkan. Request akan ditolak dengan 404.`
         : `Route ${route.service_name}/${route.feature_name} akan diaktifkan kembali.`,
       onConfirm: async () => {
         try {
-          await apiService.updateRoute(route.id, { is_active: !route.is_active });
+          await apiService.updateRoute(route.id, { is_active: !route.active });
           loadRoutes();
         } catch (err) {
           alert('Failed to toggle route: ' + err.message);
@@ -146,7 +146,7 @@ export default function RouteRegistry() {
                   <td><span className={`badge ${route.method === 'POST' ? 'badge-primary' : 'badge-info'}`}>{route.method}</span></td>
                   <td className="mono">/api/v1/{route.service_name}/{route.feature_name}</td>
                   <td className="mono" style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis' }}>{route.downstream_url}</td>
-                  <td>{route.is_transactional ? <span className="badge badge-monetary">FEE 0.5%</span> : <span className="badge badge-info">READ</span>}</td>
+                  <td>{route.transactional ? <span className="badge badge-monetary">FEE 0.5%</span> : <span className="badge badge-info">READ</span>}</td>
                   <td className="mono">{route.timeout_ms}ms</td>
                   <td className="mono">{route.max_retries}</td>
                   <td>
@@ -154,7 +154,7 @@ export default function RouteRegistry() {
                       onClick={() => handleToggleActive(route)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                     >
-                      {route.is_active ? (
+                      {route.active ? (
                         <span style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: 4 }}><ToggleRight size={18} /> Active</span>
                       ) : (
                         <span style={{ color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}><ToggleLeft size={18} /> Disabled</span>
@@ -210,8 +210,8 @@ export default function RouteRegistry() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Transactional (Fee 0.5%)</label>
-                  <select className="input" value={editRoute.is_transactional ? 'true' : 'false'}
-                    onChange={e => setEditRoute({...editRoute, is_transactional: e.target.value === 'true'})}>
+                  <select className="input" value={editRoute.transactional ? 'true' : 'false'}
+                    onChange={e => setEditRoute({...editRoute, transactional: e.target.value === 'true'})}>
                     <option value="true">Yes — Fee dipungut</option>
                     <option value="false">No — Read only</option>
                   </select>
