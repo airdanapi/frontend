@@ -1,8 +1,11 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ScrollText, Coins, Route, HeartPulse,
   ShieldCheck, Settings, SlidersHorizontal, LogOut, Radio
 } from 'lucide-react';
+import apiService from '../services/api';
+import ConfirmModal from './ConfirmModal';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -17,6 +20,21 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch {
+      // Even if the API call fails, still clear local state
+    }
+    // Clear any remaining user data from localStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    setShowLogoutModal(false);
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside className="sidebar">
@@ -53,11 +71,24 @@ export default function Sidebar() {
           <div className="sidebar-status-dot" />
           <span>System Operational</span>
         </div>
-        <button className="sidebar-link" style={{ width: '100%', border: 'none', cursor: 'pointer', background: 'none', fontFamily: 'var(--font-ui)' }}>
+        <button
+          className="sidebar-link sidebar-logout-btn"
+          onClick={() => setShowLogoutModal(true)}
+          id="sidebar-logout-button"
+        >
           <LogOut size={18} />
           <span>Log Out</span>
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        title="Log Out"
+        message="Apakah Anda yakin ingin keluar dari Integrator Console? Anda harus login kembali untuk mengakses dashboard."
+        confirmText="Log Out"
+      />
 
       <style>{`
         .sidebar {
@@ -174,6 +205,19 @@ export default function Sidebar() {
           background: var(--color-success);
           box-shadow: 0 0 6px var(--color-success);
           animation: pulse 2s ease-in-out infinite;
+        }
+
+        .sidebar-logout-btn {
+          width: 100%;
+          border: none;
+          cursor: pointer;
+          background: none;
+          font-family: var(--font-ui);
+        }
+
+        .sidebar-logout-btn:hover {
+          background: var(--color-danger-light) !important;
+          color: var(--color-danger) !important;
         }
       `}</style>
     </aside>
