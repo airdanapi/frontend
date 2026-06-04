@@ -18,6 +18,11 @@ export default function RouteRegistry() {
     loadRoutes();
   }, []);
 
+  const closeConfirmModal = () => {
+    setShowConfirm(false);
+    setConfirmAction(null);
+  };
+
   const loadRoutes = async () => {
     setLoading(true);
     try {
@@ -68,14 +73,15 @@ export default function RouteRegistry() {
       message: route.active 
         ? `Route ${route.service_name}/${route.feature_name} akan dinonaktifkan. Request akan ditolak dengan 404.`
         : `Route ${route.service_name}/${route.feature_name} akan diaktifkan kembali.`,
+      confirmText: route.active ? 'Disable' : 'Enable',
       onConfirm: async () => {
         try {
           await apiService.updateRoute(route.id, { is_active: !route.active });
-          loadRoutes();
+          await loadRoutes();
         } catch (err) {
           alert('Failed to toggle route: ' + err.message);
         }
-        setShowConfirm(false);
+        closeConfirmModal();
       }
     });
     setShowConfirm(true);
@@ -232,14 +238,14 @@ export default function RouteRegistry() {
         )}
 
         {/* Confirm Modal */}
-        {showConfirm && confirmAction && (
-          <ConfirmModal
-            title={confirmAction.title}
-            message={confirmAction.message}
-            onConfirm={confirmAction.onConfirm}
-            onCancel={() => setShowConfirm(false)}
-          />
-        )}
+        <ConfirmModal
+          isOpen={showConfirm && Boolean(confirmAction)}
+          title={confirmAction?.title || ''}
+          message={confirmAction?.message || ''}
+          confirmText={confirmAction?.confirmText || 'Confirm'}
+          onConfirm={confirmAction?.onConfirm || (() => {})}
+          onClose={closeConfirmModal}
+        />
       </div>
     </>
   );

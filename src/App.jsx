@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import RequestLogs from './pages/RequestLogs';
@@ -23,6 +24,12 @@ function AppLayout({ children }) {
 }
 
 export default function App() {
+  const protectedPage = (page) => (
+    <ProtectedRoute>
+      <AppLayout>{page}</AppLayout>
+    </ProtectedRoute>
+  );
+
   return (
     <BrowserRouter>
       <Routes>
@@ -30,14 +37,14 @@ export default function App() {
         <Route path="/login" element={<Login />} />
 
         {/* Protected pages — dengan sidebar */}
-        <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-        <Route path="/logs" element={<AppLayout><RequestLogs /></AppLayout>} />
-        <Route path="/fees" element={<AppLayout><GatewayFees /></AppLayout>} />
-        <Route path="/routes" element={<AppLayout><RouteRegistry /></AppLayout>} />
-        <Route path="/health" element={<AppLayout><ServiceHealth /></AppLayout>} />
-        <Route path="/security" element={<AppLayout><SecurityJWT /></AppLayout>} />
-        <Route path="/settings" element={<AppLayout><SettingsPage /></AppLayout>} />
-        <Route path="/configuration" element={<AppLayout><Configuration /></AppLayout>} />
+        <Route path="/dashboard" element={protectedPage(<Dashboard />)} />
+        <Route path="/logs" element={protectedPage(<RequestLogs />)} />
+        <Route path="/fees" element={protectedPage(<GatewayFees />)} />
+        <Route path="/routes" element={protectedPage(<RouteRegistry />)} />
+        <Route path="/health" element={protectedPage(<ServiceHealth />)} />
+        <Route path="/security" element={protectedPage(<SecurityJWT />)} />
+        <Route path="/settings" element={protectedPage(<SettingsPage />)} />
+        <Route path="/configuration" element={protectedPage(<Configuration />)} />
 
         {/* Default redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />
